@@ -1,4 +1,4 @@
-android_and_arduino
-===================
+Android and Arduino code
+========================
 
-Just some code samples for Android and Arduino
+Just some code samples for Android and Arduino.  All of these code samples are MIT Licensed.  Feel free to use them.
