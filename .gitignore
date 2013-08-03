@@ -1,0 +1,8 @@
+# IntelliJ Idea/Android Studio files
+*.iml
+*.ipr
+*.iws
+.idea/
+.gradle/
+
+build/
