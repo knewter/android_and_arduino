@@ -24,7 +24,6 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.UUID;
 
 public class MainActivity extends ListActivity {
   private static final String TAG = "LEDClickerBluetooth";
@@ -33,8 +32,6 @@ public class MainActivity extends ListActivity {
   private ArrayList<BluetoothDevice> mKnownDevices = new ArrayList<BluetoothDevice>();
   private BluetoothDevice mChosenDevice;
   private BluetoothSocket mSocket;
-  private InputStream mInputStream;
-  private OutputStream mOutputStream;
   private ConnectedThread mConnectedThread;
   private boolean mLEDState = false;
   int REQUEST_ENABLE_BT = 1;
@@ -68,7 +65,6 @@ public class MainActivity extends ListActivity {
       mConnectedThread.start();
       LEDToggleButton.setEnabled(true);
       showMessage("Connected Thread has started.");
-
     } catch (IOException e) {
       try {
         mSocket.close();
@@ -82,7 +78,7 @@ public class MainActivity extends ListActivity {
     } catch (IllegalAccessException e) {
       showMessage("Illegal Access");
     } catch (InvocationTargetException e) {
-      showMessage("Invokation Target Exception");
+      showMessage("Invocation Target Exception");
     }
   }
 
@@ -162,9 +158,10 @@ public class MainActivity extends ListActivity {
     }
   };
 
+  // Helper thread to manage communication to and from the Bluetooth socket.
   private class ConnectedThread extends Thread {
-    private final InputStream mmInStream;
-    private final OutputStream mmOutStream;
+    private final InputStream mInputStream;
+    private final OutputStream mOutputStream;
 
     public ConnectedThread(BluetoothSocket socket) {
       InputStream tmpIn = null;
@@ -177,8 +174,8 @@ public class MainActivity extends ListActivity {
         tmpOut = socket.getOutputStream();
       } catch (IOException e) { }
 
-      mmInStream = tmpIn;
-      mmOutStream = tmpOut;
+      mInputStream = tmpIn;
+      mOutputStream = tmpOut;
     }
 
     public void run() {
@@ -190,12 +187,10 @@ public class MainActivity extends ListActivity {
         try {
           // Read from the InputStream
           Log.d(TAG, "About to get some bytes.");
-          bytes = mmInStream.read(buffer);        // Get number of bytes and message in "buffer"
+          bytes = mInputStream.read(buffer);        // Get number of bytes and message in "buffer"
           Log.d(TAG, "Got some bytes");
-        //  Log.d(TAG, "h: " + h.toString());
-        //  Message msg = h.obtainMessage(RECEIVE_MESSAGE, bytes, -1, buffer);
-        //  Log.d(TAG, "Obtained message");
-        //  msg.sendToTarget();     // Send to message queue Handler
+          // Normally we would do something with this, but since we aren't concerned about inbound
+          // data in this application there's no need to implement it.
         } catch (IOException e) {
           break;
         }
@@ -208,7 +203,7 @@ public class MainActivity extends ListActivity {
       byte[] msgBuffer = message.getBytes();
       try {
         Log.d(TAG, "sending a message: " + message);
-        mmOutStream.write(msgBuffer);
+        mOutputStream.write(msgBuffer);
       } catch (IOException e) {
         Log.d(TAG, "...Error data send: " + e.getMessage() + "...");
       }
