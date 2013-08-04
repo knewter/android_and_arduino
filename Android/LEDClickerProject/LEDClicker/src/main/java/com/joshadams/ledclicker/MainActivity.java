@@ -3,22 +3,40 @@ package com.joshadams.ledclicker;
 import android.app.ListActivity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.app.Activity;
+import android.util.Log;
 import android.view.Menu;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.view.View;
 
-import java.util.Set;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.UUID;
 
 public class MainActivity extends ListActivity {
+  private static final String TAG = "LEDClickerBluetooth";
   private BluetoothAdapter mBluetoothAdapter;
   private ArrayAdapter<String> mArrayAdapter;
+  private ArrayList<BluetoothDevice> mKnownDevices = new ArrayList<BluetoothDevice>();
+  private BluetoothDevice mChosenDevice;
+  private BluetoothSocket mSocket;
+  private InputStream mInputStream;
+  private OutputStream mOutputStream;
+  private ConnectedThread mConnectedThread;
+  private boolean mLEDState = false;
   int REQUEST_ENABLE_BT = 1;
 
   @Override
@@ -26,8 +44,45 @@ public class MainActivity extends ListActivity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
     mArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1);
+
     if(verifyBluetoothSupport()){
-      enableBluetooth();
+      enableBluetoothAndScanForDevices();
+    }
+  }
+
+  @Override
+  protected void onListItemClick(ListView l, View v, int position, long id) {
+    super.onListItemClick(l, v, position, id);
+    // Discovery is resource-intensive, so we'll cancel it
+    mBluetoothAdapter.cancelDiscovery();
+
+    Button LEDToggleButton = (Button) findViewById(R.id.LEDToggleButton);
+    mChosenDevice = mKnownDevices.get(position);
+
+    try {
+      Method m = mChosenDevice.getClass().getMethod("createInsecureRfcommSocket", new Class[] {int.class});
+      mSocket = (BluetoothSocket) m.invoke(mChosenDevice, 1);
+      mSocket.connect();
+      showMessage("...Connection ok...");
+      mConnectedThread = new ConnectedThread(mSocket);
+      mConnectedThread.start();
+      LEDToggleButton.setEnabled(true);
+      showMessage("Connected Thread has started.");
+
+    } catch (IOException e) {
+      try {
+        mSocket.close();
+        showMessage("IOException.  Closed socket successfully.");
+        Log.e(TAG, e.getMessage());
+      } catch (IOException e2) {
+        showMessage("Fatal Error in onResume() and unable to close socket during connection failure" + e2.getMessage() + ".");
+      }
+    } catch (NoSuchMethodException e) {
+      showMessage("No such method, sorry.");
+    } catch (IllegalAccessException e) {
+      showMessage("Illegal Access");
+    } catch (InvocationTargetException e) {
+      showMessage("Invokation Target Exception");
     }
   }
 
@@ -39,7 +94,12 @@ public class MainActivity extends ListActivity {
   }
 
   public void onLEDButtonClick(View view) {
-    showMessage("Pretend this is an LED");
+    if(mLEDState){
+      mConnectedThread.write("0");
+    } else {
+      mConnectedThread.write("1");
+    }
+    mLEDState = !mLEDState;
   }
 
   public boolean verifyBluetoothSupport() {
@@ -53,7 +113,7 @@ public class MainActivity extends ListActivity {
     }
   }
 
-  public void enableBluetooth() {
+  public void enableBluetoothAndScanForDevices() {
     if (!mBluetoothAdapter.isEnabled()) {
       Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
       startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
@@ -82,6 +142,11 @@ public class MainActivity extends ListActivity {
     mBluetoothAdapter.startDiscovery();
   }
 
+  public void onDestroy(){
+    unregisterReceiver(mReceiver);
+    super.onDestroy();
+  }
+
   private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
     public void onReceive(Context context, Intent intent) {
       String action = intent.getAction();
@@ -91,8 +156,62 @@ public class MainActivity extends ListActivity {
         BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
         // Add the name and address to an array adapter to show in a ListView
         mArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+        mKnownDevices.add(device);
         setListAdapter(mArrayAdapter);
       }
     }
   };
+
+  private class ConnectedThread extends Thread {
+    private final InputStream mmInStream;
+    private final OutputStream mmOutStream;
+
+    public ConnectedThread(BluetoothSocket socket) {
+      InputStream tmpIn = null;
+      OutputStream tmpOut = null;
+
+      // Get the input and output streams, using temp objects because
+      // member streams are final
+      try {
+        tmpIn = socket.getInputStream();
+        tmpOut = socket.getOutputStream();
+      } catch (IOException e) { }
+
+      mmInStream = tmpIn;
+      mmOutStream = tmpOut;
+    }
+
+    public void run() {
+      byte[] buffer = new byte[256];  // buffer store for the stream
+      int bytes; // bytes returned from read()
+
+      // Keep listening to the InputStream until an exception occurs
+      while (true) {
+        try {
+          // Read from the InputStream
+          Log.d(TAG, "About to get some bytes.");
+          bytes = mmInStream.read(buffer);        // Get number of bytes and message in "buffer"
+          Log.d(TAG, "Got some bytes");
+        //  Log.d(TAG, "h: " + h.toString());
+        //  Message msg = h.obtainMessage(RECEIVE_MESSAGE, bytes, -1, buffer);
+        //  Log.d(TAG, "Obtained message");
+        //  msg.sendToTarget();     // Send to message queue Handler
+        } catch (IOException e) {
+          break;
+        }
+      }
+    }
+
+    /* Call this from the main activity to send data to the remote device */
+    public void write(String message) {
+      Log.d(TAG, "...Data to send: " + message + "...");
+      byte[] msgBuffer = message.getBytes();
+      try {
+        Log.d(TAG, "sending a message: " + message);
+        mmOutStream.write(msgBuffer);
+      } catch (IOException e) {
+        Log.d(TAG, "...Error data send: " + e.getMessage() + "...");
+      }
+    }
+  }
 }

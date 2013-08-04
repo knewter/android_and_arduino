@@ -13,5 +13,17 @@
             android:layout_height="wrap_content"
             android:id="@android:id/list"
             android:layout_alignParentTop="true"
-            android:layout_alignParentLeft="true"/>
+            android:layout_alignParentLeft="true"
+            android:layout_marginBottom="100dp"/>
+
+    <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Toggle That LED, Boy."
+            android:id="@+id/LEDToggleButton"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="12dp"
+            android:enabled="false"
+            android:onClick="onLEDButtonClick"/>
 </RelativeLayout>
