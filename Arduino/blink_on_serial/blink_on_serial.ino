@@ -1,7 +1,7 @@
 int led = 13;          // Internal LED / pin 13
 int inByte = 0;        // incoming serial byte
-int onMessage = 49;    // expected "on" message
-int offMessage = 48;   // expected "off" message
+int onMessage = 49;    // expected "on" message.  This is a "1" character.
+int offMessage = 48;   // expected "off" message.  This is a "0" character.
 
 void setup()
 {
