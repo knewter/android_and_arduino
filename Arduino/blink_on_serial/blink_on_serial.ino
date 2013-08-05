@@ -8,8 +8,8 @@ void setup()
   // initialize the digital pin as an output.
   pinMode(led, OUTPUT); 
 
-  // start serial port at 9600 bps:
-  Serial.begin(9600);
+  // start serial port at 115200 bps:
+  Serial.begin(115200);
   while (!Serial) {
     ; // This is only required if you have a Leonardo
   }
