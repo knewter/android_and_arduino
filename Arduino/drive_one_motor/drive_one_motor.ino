@@ -1,12 +1,17 @@
-int led = 13;          // Internal LED / pin 13
-int inByte = 0;        // incoming serial byte
-int onMessage = 49;    // expected "on" message.  This is a "1" character.
-int offMessage = 48;   // expected "off" message.  This is a "0" character.
+#include <Servo.h>
+
+Servo leftMotor;        // create servo for the left motor
+int leftMotorPin = 11;  // Left Motor on pin 11
+Servo rightMotor;       // create servo for the right motor
+int rightMotorPin = 12; // Right Motor on pin 12
+int inByte = 0;         // incoming serial byte
+int onMessage = 49;     // expected "on" message.  This is a "1" character.
+int offMessage = 48;    // expected "off" message.  This is a "0" character.
 
 void setup()
 {
-  // initialize the digital pin as an output.
-  pinMode(led, OUTPUT);
+  leftMotor.attach(leftMotorPin);
+  rightMotor.attach(rightMotorPin);
 
   // start serial port at 115200 bps:
   Serial.begin(115200);
@@ -41,9 +46,11 @@ void establishContact() {
 }
 
 void turnOn() {
-  digitalWrite(led, HIGH);
+  leftMotor.write(100);  // Forward 1/8-ish
+  rightMotor.write(100);  // Forward 1/8-ish
 }
 
 void turnOff() {
-  digitalWrite(led, LOW);
+  leftMotor.write(90);
+  rightMotor.write(90);
 }
