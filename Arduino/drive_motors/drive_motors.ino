@@ -31,11 +31,12 @@ void loop() {
     inByte = Serial.read();
     handleCommand(inByte);
   }
-//  drive();
+  drive();
 }
 
 void drive() {
-  debug();
+  leftMotor.write(leftMotorValue);
+  rightMotor.write(rightMotorValue);
 }
 
 void debug() {
@@ -44,13 +45,10 @@ void debug() {
 }
 
 void handleCommand(char inByte) {
-  debug();
   if(inByte <= 'u' && inByte >= 'a'){
-    Serial.println("aaa");
     updateLeftMotor(inByte);
   }
   if(inByte <= 'U' && inByte >= 'A'){
-    Serial.println("bbb");
     updateRightMotor(inByte);
   }
 }
@@ -65,19 +63,9 @@ void updateRightMotor(char value){
 
 void establishContact() {
   while (Serial.available() <= 0) {
-    Serial.print(rightMotorValueMapped('B')); // send a capital A
+    Serial.print('A'); // send a capital A
     delay(300);
   }
-}
-
-void turnOn() {
-  leftMotor.write(100);  // Forward 1/8-ish
-  rightMotor.write(100);  // Forward 1/8-ish
-}
-
-void turnOff() {
-  leftMotor.write(90);
-  rightMotor.write(90);
 }
 
 // Protocol for motor speeds:
